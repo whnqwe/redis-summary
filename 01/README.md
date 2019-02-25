@@ -327,3 +327,37 @@ MULTI
 ##### 执行事务
 
 EXEC
+
+
+
+#### 发布订阅
+
+publish channel message
+
+> publish channel_name  message
+
+> publish queue hello
+
+subscribe channel [ …]
+
+> subscribe queue
+
+#### redis实现分布式锁
+
+##### 数据库
+
+##### activemq
+
+##### 缓存
+
+> -redis setnx
+
+##### zookeeper
+
+
+
+#### redis分片策略
+
+> codis 
+>
+> twmproxy
