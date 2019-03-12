@@ -8,13 +8,52 @@
 
 ##### 字符类型
 
+###### 使用场景
+
+- session复制
+
+- IP限制 （incr）
+
+  > 短信验证
+
+###### 注意事项
+
+namespace规范
+
+sms:limit:mobile
+
+
+
 ###### 最大限制与数据存储
 
 >  字符串类型是redis中最基本的数据类型，它能存储任何形式的字符串，包括二进制数据。你可以用它存储用户的邮箱、json化的对象甚至是图片。一个字符类型键允许存储的最大容量是512M
 
 ###### 内部数据结构
 
-> 在Redis内部，String类型通过 int、SDS(simple dynamic string)作为结构存储，int用来存放整型数据，sds存放字节/字符串和浮点型数据。
+> 在Redis内部，String类型通过 **int、SDS**(simple dynamic string)作为结构存储，int用来存放整型数据，sds存放字节/字符串和浮点型数据。
+
+> redis3.2分支引入了五种sdshdr类型，目的是为了满足不同长度字符串可以使用不同大小的Header，从而节省内存，每次在创建一个sds时根据sds的实际长度判断应该选择什么类型的sdshdr，不同类型的sdshdr占用的内存空间不同。这样细分一下可以省去很多不必要的内存开销
+
+```c
+//redis会根据字符串的长度来判断使用哪个sdshdr
+struct __attribute__ ((__packed__)) sdshdr5{}//sdshdr5没有用到
+struct __attribute__ ((__packed__)) sdshdr8{}
+struct __attribute__ ((__packed__)) sdshdr16{}
+struct __attribute__ ((__packed__)) sdshdr32{}
+struct __attribute__ ((__packed__)) sdshdr64{}
+
+typedef char *sds;
+
+struct __attribute__ ((__packed__)) sdshdr8 //8表示字符串最大长度是2^8-1 （长度为255）
+{ 
+ uint8_t len;//表示当前sds的长度(单位是字节)  
+ uint8_t alloc; //表示已为sds分配的内存大小(单位是字节)  
+ unsigned char flags; 
+ //用一个字节表示当前sdshdr的类型，因为有sdshdr有五种类型，所以至少需要3位来表示000:sdshdr5，001:sdshdr8，010:sdshdr16，011:sdshdr32，100:sdshdr64。高5位用不到所以都为0。  
+char buf[];//sds实际存放的位置``};
+```
+
+![](image/001.png)
 
 ###### 赋值
 
@@ -64,11 +103,47 @@ mgetkey key..
 
 mset key value  key value key value …
 
+
+
+
+
 ##### 列表类型
+
+###### 使用场景
+
+
+
+- 生产者 / 消费者
+
+![](image/002.png)
+
+- 栈
+
+- 队列
+
+  
+
+
+
+###### 内部数据结构
+
+> redis3.2之前，List类型的value对象内部以linkedlist或者ziplist来实现, 当list的元素个数和单个元素的长度比较小的时候，Redis会采用ziplist（压缩列表）来实现来减少内存占用。否则就会采用linkedlist（双向链表）结构。
+
+> redis3.2之后，采用的一种叫quicklist的数据结构来存储list，列表的底层都由quicklist实现。
+
+> 这两种存储方式都有优缺点
+>
+> 双向链表在链表两端进行push和pop操作，在插入节点上复杂度比较低，但是内存开销比较大； 
+>
+> ziplist存储在一段连续的内存上，所以存储效率很高，但是插入和删除都需要频繁申请和释放内存；
+
+> quicklist仍然是一个双向链表，只是列表的每个节点都是一个ziplist，其实就是linkedlist和ziplist的结合，quicklist中每个节点ziplist都能够存储多个数据元素
+
+
 
 ###### 概念
 
-> list,可以存储一个有序的字符串列表
+> list,可以存储一个有序的字符串列表,常用的操作是向列表两端添加元素或者获得列表的某一个片段。
 
 ###### 从左边push数据
 
