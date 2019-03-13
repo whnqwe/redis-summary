@@ -230,4 +230,16 @@ volatile-ttl：从已设置过期时间的数据集（server.db[i].expires）中
 
 ##### 多路复用
 
-> 
+> - 同步阻塞IO（Blocking IO）：即传统的IO模型。
+> - 同步非阻塞IO（Non-blocking IO）：默认创建的socket都是阻塞的，非阻塞IO要求socket被设置为
+>   NONBLOCK。
+> - IO多路复用（IO Multiplexing）：即经典的Reactor设计模式，也称为异步阻塞IO，Java中的Selector和
+>   Linux中的epoll都是这种模型。
+> - 异步IO（Asynchronous IO）：即经典的Proactor设计模式，也称为异步非阻塞IO。
+
+###### 同步异步阻塞非阻塞的区别
+
+> **同步 异步 的区别在于 内核处理结果，需不需要应用进程去拿，需要应用进程去获取就是同步，由内核返回就是异步。**
+
+> **阻塞非阻塞的区别，应用进程与内核交互后是不是直接返回。等待io处理结果后返回就是阻塞，无需等待处理结果直接返回就是非阻塞。**
+
