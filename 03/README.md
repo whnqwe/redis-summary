@@ -13,6 +13,17 @@
 
 在redis中配置master/slave是非常容易的，只需要在从数据库的配置文件中加入slaveof 主数据库地址 端口。 而master 数据库不需要做任何改变
 
+```java
+准备两台服务器，分别安装redis ， server1 server2
+1.  在server2的redis.conf文件中增加 slaveof server1-ip 6379 、 同时将bindip注释掉，允许所
+有ip访问
+2. 启动server2
+3. 访问server2的redis客户端，输入 INFO replication
+4. 通过在master机器上输入命令，比如set foo bar 、 在slave服务器就能看到该值已经同步过来了
+```
+
+
+
 #### 原理
 
 ##### 全量复制
@@ -27,7 +38,37 @@ slave以断开
 
 ##### 增量复制
 
+> 从redis 2.8开始，就支持主从复制的断点续传，如果主从复制过程中，网络连接断掉了，那么可以接着上次复制的地方，继续复制下去，而不是从头开始复制一份master node会在内存中创建一个**backlog**，master和slave都会保存一个replica **offset**还有一个master id，offset就是保存在backlog中的。如果master和slave网络连接断掉了，slave会让master从上次的replica offset开始继续复制但是如果没有找到对应的offset，那么就会执行一次全量同步
+
 ##### 无硬盘复制
 
+> 前面我们说过，Redis复制的工作原理基于RDB方式的持久化实现的，也就是master在后台保存RDB快照，slave接
+> 收到rdb文件并载入，但是这种方式会存在一些问题
+> 1. 当master禁用RDB时，如果执行了复制初始化操作，Redis依然会生成RDB快照，当master下次启动时执行RDB文件的恢复，但是因为复制发生的时间点不确定，所以恢复的数据可能是任何时间点的。就会造成数据出现问题
+>
+> 2. 当硬盘性能比较慢的情况下（网络硬盘），那初始化复制过程会对性能产生影响因此2.8.18以后的版本，Redis引入了无硬盘复制选项，可以不需要通过RDB文件去同步，直接发送数据，通过以
+>    下配置来开启该功能
+>    **repl-diskless-sync yes**
+>    master在内存中直接创建rdb，然后发送给slave，不会在自己本地落地磁盘了
+
 #### 哨兵机制
+
+> master遇到异常终端后，需要从slave中选举一个新的master继续对外提供服务,redis并没有提供自动master选举功能，而是需要借助一个哨兵来进行监控
+
+##### 什么是哨兵
+
+> 顾名思义，哨兵的作用就是监控Redis系统的运行状况，它的功能包括两个
+>
+> 1. 监控master和slave是否正常运
+> 2. master出现故障时自动将slave数据库升级为master
+
+![](image/003.png)
+
+##### 哨兵集群
+
+> 哨兵的可用性如何解决，在一个一主多从的Redis系统中，可以使用多个哨兵进行监控任务以保证系统足够稳定。此时哨兵不仅会监控master和slave，同时还会互相监控；这种方式称为哨兵集群，哨兵集群需要解决故障发现、和master决策的协商机制问题
+>
+> 两个哨兵的协商机制：raft机制
+
+![](image/004.png)
 
